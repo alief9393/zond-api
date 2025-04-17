@@ -1,0 +1,40 @@
+# Ignore .env file with sensitive configuration
+.env
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+
+# Go test and coverage files
+*.test
+*.out
+coverage.txt
+
+# Dependency directories (if vendoring)
+vendor/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# macOS system files
+.DS_Store
+
+# Other common ignores
+*.bak
+*.gho
+*.orig
+*.tmp.env
