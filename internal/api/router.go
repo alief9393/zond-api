@@ -1,10 +1,14 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"sync"
 	"time"
 
+	"zond-api/internal/api/dto"
 	"zond-api/internal/api/handler"
 	"zond-api/internal/api/repository"
 	"zond-api/internal/api/service"
@@ -12,7 +16,51 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
 )
+
+type rateLimiter struct {
+	limiters map[string]*rate.Limiter
+	mu       sync.Mutex
+	db       *pgxpool.Pool
+}
+
+func newRateLimiter() *rateLimiter {
+	return &rateLimiter{
+		limiters: make(map[string]*rate.Limiter),
+	}
+}
+
+func (rl *rateLimiter) getLimiter(username string, isPaid bool) *rate.Limiter {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	if limiter, exists := rl.limiters[username]; exists {
+		return limiter
+	}
+
+	var requestsPerMinute int
+	err := rl.db.QueryRow(context.Background(), `
+		SELECT requests_per_minute 
+		FROM rate_limits WHERE is_paid = $1`, isPaid).
+		Scan(&requestsPerMinute)
+	if err != nil {
+		// Fallback to default
+		if isPaid {
+			requestsPerMinute = 100
+		} else {
+			requestsPerMinute = 10
+		}
+	}
+
+	limit := rate.Every(time.Minute / time.Duration(requestsPerMinute))
+	limiter := rate.NewLimiter(limit, 1)
+	rl.limiters[username] = limiter
+	return limiter
+}
+
+var globalRateLimiter = newRateLimiter()
 
 func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	blockRepo := repository.NewBlockRepoPG(db)
@@ -37,7 +85,8 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	reorgHandler := handler.NewReorgHandler(reorgService)
 	validatorHandler := handler.NewValidatorHandler(validatorService)
 	r := gin.Default()
-	r.POST("/api/login", loginHandler(jwtSecret))
+	r.POST("/login", loginHandler(db))
+	r.POST("/register", registerHandler(db))
 	api := r.Group("/api")
 	api.Use(jwtMiddleware(jwtSecret))
 	blocks := api.Group("/blocks")
@@ -45,68 +94,99 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 		blocks.GET("/latest", blockHandler.GetLatestBlocks)
 		blocks.GET("/:block_number", blockHandler.GetBlockByNumber)
 	}
-
 	transactions := api.Group("/transactions")
 	{
 		transactions.GET("/latest", txHandler.GetLatestTransactions)
 		transactions.GET("/:tx_hash", txHandler.GetTransactionByHash)
 	}
-
 	addresses := api.Group("/addresses")
 	{
 		addresses.GET("/:address/balance", addrHandler.GetAddressBalance)
 		addresses.GET("/:address/transactions", addrHandler.GetAddressTransactions)
 	}
-
 	forks := api.Group("/forks")
 	{
 		forks.GET("", forkHandler.GetForks)
 	}
-
 	chain := api.Group("/chain")
 	{
 		chain.GET("", chainHandler.GetChainInfo)
 	}
-
 	reorgs := api.Group("/reorgs")
 	{
 		reorgs.GET("", reorgHandler.GetReorgs)
 	}
-
 	validators := api.Group("/validators")
 	{
 		validators.GET("", validatorHandler.GetValidators)
 	}
+	api.GET("/premium", premiumHandler)
 
 	return r
 }
 
-func loginHandler(jwtSecret string) gin.HandlerFunc {
+func loginHandler(db *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var user struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
-		if err := c.ShouldBindJSON(&user); err != nil {
+		var req dto.LoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		if user.Username != "admin" || user.Password != "password123" {
+
+		var username, password string
+		var isPaid bool
+		err := db.QueryRow(context.Background(), `
+			SELECT username, password, is_paid 
+			FROM users WHERE username = $1`, req.Username).
+			Scan(&username, &password, &isPaid)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(req.Password)); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			return
+		}
+
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": user.Username,
-			"role":     "admin",
+			"username": username,
+			"is_paid":  isPaid,
 			"exp":      time.Now().Add(time.Hour * 24).Unix(),
 		})
-		tokenString, err := token.SignedString([]byte(jwtSecret))
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"token": tokenString})
+		c.JSON(http.StatusOK, dto.LoginResponse{Token: tokenString, IsPaid: isPaid})
+	}
+}
+
+func registerHandler(db *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req dto.LoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			return
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+
+		_, err = db.Exec(context.Background(), `
+			INSERT INTO users (username, password, is_paid) 
+			VALUES ($1, $2, $3)`, req.Username, string(hashedPassword), req.IsPaid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Username already exists"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "User created"})
 	}
 }
 
@@ -142,10 +222,29 @@ func jwtMiddleware(jwtSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("username", claims["username"])
-			c.Set("role", claims["role"])
+			username, _ := claims["username"].(string)
+			isPaid, _ := claims["is_paid"].(bool)
+			c.Set("username", username)
+			c.Set("is_paid", isPaid)
+
+			// Apply rate limiting
+			limiter := globalRateLimiter.getLimiter(username, isPaid)
+			if !limiter.Allow() {
+				c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+				c.Abort()
+				return
+			}
 		}
 
 		c.Next()
 	}
+}
+
+func premiumHandler(c *gin.Context) {
+	isPaid, exists := c.Get("is_paid")
+	if !exists || !isPaid.(bool) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Paid account required"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Premium data for paid users"})
 }

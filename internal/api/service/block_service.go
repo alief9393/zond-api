@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	"zond-api/internal/api/dto"
@@ -104,4 +105,8 @@ func (s *BlockService) GetForkedBlocks(limit, offset int) (dto.BlocksResponse, e
 		})
 	}
 	return dto.BlocksResponse{Blocks: blockResponses}, nil
+}
+
+func (s *BlockService) GetBlockByHash(ctx context.Context, hash string) (*dto.BlockResponse, error) {
+	return s.repo.GetBlockByHash(ctx, hash)
 }

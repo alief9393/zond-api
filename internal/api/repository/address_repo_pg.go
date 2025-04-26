@@ -58,3 +58,25 @@ func (r *AddressRepoPG) GetAddressTransactions(ctx context.Context, address stri
 
 	return &dto.TransactionsResponse{Transactions: transactions}, nil
 }
+
+func (r *AddressRepoPG) GetTopAddresses(ctx context.Context, limit int) (*dto.TopAddressesResponse, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT address, balance 
+		FROM addresses 
+		ORDER BY balance::numeric DESC 
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var addresses []dto.AddressResponse
+	for rows.Next() {
+		var addr dto.AddressResponse
+		if err := rows.Scan(&addr.Address, &addr.Balance); err != nil {
+			return nil, err
+		}
+		addresses = append(addresses, addr)
+	}
+	return &dto.TopAddressesResponse{Addresses: addresses}, nil
+}

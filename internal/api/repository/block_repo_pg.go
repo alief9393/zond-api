@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"zond-api/internal/api/dto"
 	"zond-api/internal/domain/model"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -96,4 +97,23 @@ func (r *BlockRepoPG) GetForkedBlocks(limit, offset int) ([]model.Block, error) 
 		blocks = append(blocks, block)
 	}
 	return blocks, nil
+}
+
+func (r *BlockRepoPG) GetBlockByHash(ctx context.Context, hash string) (*dto.BlockResponse, error) {
+	var block dto.BlockResponse
+	err := r.db.QueryRow(ctx, `
+		SELECT block_number, block_hash, timestamp, miner_address, canonical, 
+		       parent_hash, gas_used, gas_limit, size, transaction_count, 
+		       extra_data, base_fee_per_gas, transactions_root, state_root, 
+		       receipts_root, logs_bloom, chain_id, retrieved_from
+		FROM blocks WHERE block_hash = $1`, hash).
+		Scan(&block.BlockNumber, &block.BlockHash, &block.Timestamp, &block.MinerAddress,
+			&block.Canonical, &block.ParentHash, &block.GasUsed, &block.GasLimit,
+			&block.Size, &block.TransactionCount, &block.ExtraData, &block.BaseFeePerGas,
+			&block.TransactionsRoot, &block.StateRoot, &block.ReceiptsRoot,
+			&block.LogsBloom, &block.ChainID, &block.RetrievedFrom)
+	if err != nil {
+		return nil, err
+	}
+	return &block, nil
 }

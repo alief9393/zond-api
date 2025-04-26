@@ -17,3 +17,7 @@ type AddressResponse struct {
 	Address string `json:"address"`
 	Balance string `json:"balance"`
 }
+
+type TopAddressesResponse struct {
+	Addresses []AddressResponse `json:"addresses"`
+}
