@@ -24,6 +24,18 @@ type TransactionsResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
 
+type PaginationInfo struct {
+	Page    int  `json:"page"`
+	Limit   int  `json:"limit"`
+	Total   int  `json:"total"`
+	HasNext bool `json:"has_next"`
+}
+
+type TransactionsPaginatedResponse struct {
+	Transactions []TransactionResponse `json:"transactions"`
+	Pagination   PaginationInfo        `json:"pagination"`
+}
+
 type TransactionMetricsResponse struct {
 	Transactions24h       int     `json:"transactions_24h"`
 	PendingTransactions1h int     `json:"pending_transactions_1h"`

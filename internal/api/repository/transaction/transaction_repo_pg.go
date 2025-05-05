@@ -121,15 +121,8 @@ func (r *TransactionRepoPG) GetTransactionMetrics(ctx context.Context) (*dto.Tra
 	return &metrics, nil
 }
 
-func (r *TransactionRepoPG) GetLatestTransactionsWithFilter(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
-	offset := (page - 1) * limit
-	query := `
-		SELECT tx_hash, block_number, from_address, to_address, value, gas, gas_price, type,
-		       chain_id, access_list, max_fee_per_gas, max_priority_fee_per_gas, transaction_index,
-		       cumulative_gas_used, is_successful, retrieved_from, is_canonical
-		FROM transactions
-		WHERE 1=1
-	`
+func (r *TransactionRepoPG) CountTransactionsWithFilter(ctx context.Context, method, from, to string) (int, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE 1=1`
 	args := []interface{}{}
 	argPos := 1
 
@@ -149,8 +142,37 @@ func (r *TransactionRepoPG) GetLatestTransactionsWithFilter(ctx context.Context,
 		argPos++
 	}
 
-	query += fmt.Sprintf(" ORDER BY block_number DESC LIMIT $%d OFFSET $%d", argPos, argPos+1)
-	args = append(args, limit, offset)
+	var total int
+	err := r.db.QueryRow(ctx, query, args...).Scan(&total)
+	return total, err
+}
+
+func (r *TransactionRepoPG) GetLatestTransactionsWithFilter(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
+	query := `SELECT tx_hash, block_number, from_address, to_address, value, gas, gas_price, type,
+	                 chain_id, access_list, max_fee_per_gas, max_priority_fee_per_gas, transaction_index,
+	                 cumulative_gas_used, is_successful, retrieved_from, is_canonical
+	          FROM transactions WHERE 1=1`
+	args := []interface{}{}
+	argPos := 1
+
+	if method != "" {
+		query += fmt.Sprintf(" AND method = $%d", argPos)
+		args = append(args, method)
+		argPos++
+	}
+	if from != "" {
+		query += fmt.Sprintf(" AND encode(from_address, 'hex') ILIKE $%d", argPos)
+		args = append(args, from+"%")
+		argPos++
+	}
+	if to != "" {
+		query += fmt.Sprintf(" AND encode(to_address, 'hex') ILIKE $%d", argPos)
+		args = append(args, to+"%")
+		argPos++
+	}
+
+	query += fmt.Sprintf(" ORDER BY block_number DESC, transaction_index ASC LIMIT $%d OFFSET $%d", argPos, argPos+1)
+	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
@@ -162,14 +184,101 @@ func (r *TransactionRepoPG) GetLatestTransactionsWithFilter(ctx context.Context,
 	for rows.Next() {
 		var tx model.Transaction
 		if err := rows.Scan(
-			&tx.TxHash, &tx.BlockNumber, &tx.FromAddress, &tx.ToAddress, &tx.Value,
-			&tx.Gas, &tx.GasPrice, &tx.Type, &tx.ChainID, &tx.AccessList,
-			&tx.MaxFeePerGas, &tx.MaxPriorityFeePerGas, &tx.TransactionIndex,
-			&tx.CumulativeGasUsed, &tx.IsSuccessful, &tx.RetrievedFrom, &tx.IsCanonical,
+			&tx.TxHash, &tx.BlockNumber, &tx.FromAddress, &tx.ToAddress, &tx.Value, &tx.Gas, &tx.GasPrice,
+			&tx.Type, &tx.ChainID, &tx.AccessList, &tx.MaxFeePerGas, &tx.MaxPriorityFeePerGas,
+			&tx.TransactionIndex, &tx.CumulativeGasUsed, &tx.IsSuccessful, &tx.RetrievedFrom, &tx.IsCanonical,
 		); err != nil {
 			return nil, err
 		}
 		txs = append(txs, tx)
 	}
+
 	return txs, nil
+}
+
+func (r *TransactionRepoPG) CountPendingTransactions(ctx context.Context, method, from, to string) (int, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) FROM transactions
+		WHERE block_number IS NULL
+	`
+
+	args := []interface{}{}
+	i := 1
+
+	if method != "" {
+		query += fmt.Sprintf(" AND type = $%d", i)
+		args = append(args, method)
+		i++
+	}
+	if from != "" {
+		query += fmt.Sprintf(" AND encode(from_address, 'hex') ILIKE $%d", i)
+		args = append(args, from+"%")
+		i++
+	}
+	if to != "" {
+		query += fmt.Sprintf(" AND encode(to_address, 'hex') ILIKE $%d", i)
+		args = append(args, to+"%")
+		i++
+	}
+
+	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
+	return count, err
+}
+
+func (r *TransactionRepoPG) GetPendingTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
+	var transactions []model.Transaction
+
+	offset := (page - 1) * limit
+	query := `
+		SELECT tx_hash, block_number, from_address, to_address, value, gas, gas_price, type,
+		       chain_id, access_list, max_fee_per_gas, max_priority_fee_per_gas, transaction_index,
+		       cumulative_gas_used, is_successful, retrieved_from, is_canonical
+		FROM transactions
+		WHERE block_number IS NULL
+	`
+
+	args := []interface{}{}
+	i := 1
+
+	if method != "" {
+		query += fmt.Sprintf(" AND type = $%d", i)
+		args = append(args, method)
+		i++
+	}
+	if from != "" {
+		query += fmt.Sprintf(" AND encode(from_address, 'hex') ILIKE $%d", i)
+		args = append(args, from+"%")
+		i++
+	}
+	if to != "" {
+		query += fmt.Sprintf(" AND encode(to_address, 'hex') ILIKE $%d", i)
+		args = append(args, to+"%")
+		i++
+	}
+
+	query += fmt.Sprintf(" ORDER BY transaction_index DESC LIMIT $%d OFFSET $%d", i, i+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tx model.Transaction
+		err := rows.Scan(
+			&tx.TxHash, &tx.BlockNumber, &tx.FromAddress, &tx.ToAddress, &tx.Value, &tx.Gas,
+			&tx.GasPrice, &tx.Type, &tx.ChainID, &tx.AccessList, &tx.MaxFeePerGas,
+			&tx.MaxPriorityFeePerGas, &tx.TransactionIndex, &tx.CumulativeGasUsed,
+			&tx.IsSuccessful, &tx.RetrievedFrom, &tx.IsCanonical,
+		)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
 }

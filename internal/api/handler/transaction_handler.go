@@ -94,9 +94,17 @@ func (h *TransactionHandler) GetLatestTransactionsWithFilter(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 
-	txs, err := h.service.GetLatestTransactionsWithFilter(c.Request.Context(), page, limit, method, from, to)
+	ctx := c.Request.Context()
+
+	txs, err := h.service.GetLatestTransactionsWithFilter(ctx, page, limit, method, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get filtered transactions"})
+		return
+	}
+
+	total, err := h.service.CountTransactionsWithFilter(ctx, method, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count transactions"})
 		return
 	}
 
@@ -128,5 +136,61 @@ func (h *TransactionHandler) GetLatestTransactionsWithFilter(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, dto.TransactionsResponse{Transactions: txResponses})
+	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
+		Transactions: txResponses,
+		Pagination: dto.PaginationInfo{
+			Page:    page,
+			Limit:   limit,
+			Total:   total,
+			HasNext: page*limit < total,
+		},
+	})
+}
+
+func (h *TransactionHandler) GetPendingTransactions(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	method := c.Query("method")
+	from := c.Query("from")
+	to := c.Query("to")
+
+	transactions, count, err := h.service.GetPendingTransactions(c.Request.Context(), page, limit, method, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve pending transactions"})
+		return
+	}
+
+	var txResponses []dto.TransactionResponse
+	for _, tx := range transactions {
+		txResponses = append(txResponses, dto.TransactionResponse{
+			TxHash:               fmt.Sprintf("0x%x", tx.TxHash),
+			BlockNumber:          tx.BlockNumber,
+			FromAddress:          fmt.Sprintf("0x%x", tx.FromAddress),
+			ToAddress:            fmt.Sprintf("0x%x", tx.ToAddress),
+			Value:                tx.Value,
+			Gas:                  tx.Gas,
+			GasPrice:             tx.GasPrice,
+			Type:                 tx.Type,
+			ChainID:              tx.ChainID,
+			AccessList:           string(tx.AccessList),
+			MaxFeePerGas:         tx.MaxFeePerGas,
+			MaxPriorityFeePerGas: tx.MaxPriorityFeePerGas,
+			TransactionIndex:     tx.TransactionIndex,
+			CumulativeGasUsed:    tx.CumulativeGasUsed,
+			IsSuccessful:         tx.IsSuccessful,
+			RetrievedFrom:        tx.RetrievedFrom,
+			IsCanonical:          tx.IsCanonical,
+		})
+	}
+
+	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
+		Transactions: txResponses,
+		Pagination: dto.PaginationInfo{
+			Page:    page,
+			Limit:   limit,
+			Total:   count,
+			HasNext: (page * limit) < count,
+		},
+	})
+
 }

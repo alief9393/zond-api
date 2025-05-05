@@ -12,4 +12,7 @@ type TransactionRepository interface {
 	GetTransactionsByBlockNumber(blockNumber int64) ([]model.Transaction, error)
 	GetTransactionMetrics(ctx context.Context) (*dto.TransactionMetricsResponse, error)
 	GetLatestTransactionsWithFilter(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error)
+	CountTransactionsWithFilter(ctx context.Context, method, from, to string) (int, error)
+	GetPendingTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error)
+	CountPendingTransactions(ctx context.Context, method, from, to string) (int, error)
 }

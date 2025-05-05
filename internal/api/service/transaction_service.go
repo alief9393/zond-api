@@ -136,3 +136,19 @@ func (s *TransactionService) GetTransactionMetrics(ctx context.Context) (*dto.Tr
 func (s *TransactionService) GetLatestTransactionsWithFilter(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
 	return s.repo.GetLatestTransactionsWithFilter(ctx, page, limit, method, from, to)
 }
+
+func (s *TransactionService) CountTransactionsWithFilter(ctx context.Context, method, from, to string) (int, error) {
+	return s.repo.CountTransactionsWithFilter(ctx, method, from, to)
+}
+
+func (s *TransactionService) GetPendingTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, int, error) {
+	transactions, err := s.repo.GetPendingTransactions(ctx, page, limit, method, from, to)
+	if err != nil {
+		return nil, 0, err
+	}
+	count, err := s.repo.CountPendingTransactions(ctx, method, from, to)
+	if err != nil {
+		return nil, 0, err
+	}
+	return transactions, count, nil
+}
