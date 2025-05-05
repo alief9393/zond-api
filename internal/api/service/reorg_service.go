@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"zond-api/internal/api/dto"
-	"zond-api/internal/api/repository"
+	reorgRepo "zond-api/internal/api/repository/reorg"
 )
 
 type ReorgService interface {
@@ -11,10 +11,10 @@ type ReorgService interface {
 }
 
 type reorgService struct {
-	repo repository.ReorgRepo
+	repo reorgRepo.ReorgRepo
 }
 
-func NewReorgService(repo repository.ReorgRepo) ReorgService {
+func NewReorgService(repo reorgRepo.ReorgRepo) ReorgService {
 	return &reorgService{repo: repo}
 }
 

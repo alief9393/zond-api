@@ -7,10 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type ValidatorRepo interface {
-	GetValidators(ctx context.Context) (*dto.ValidatorsResponse, error)
-}
-
 type ValidatorRepoPG struct {
 	db *pgxpool.Pool
 }
@@ -45,4 +41,24 @@ func (r *ValidatorRepoPG) GetValidators(ctx context.Context) (*dto.ValidatorsRes
 	}
 
 	return &dto.ValidatorsResponse{Validators: validators}, nil
+}
+
+func (r *ValidatorRepoPG) GetValidatorByID(ctx context.Context, index int) (*dto.ValidatorDetailResponse, error) {
+	var validator dto.ValidatorDetailResponse
+
+	err := r.db.QueryRow(ctx, `
+		SELECT public_key, validator_index, balance, status, effective_balance, 
+		       activation_epoch, exit_epoch, chain_id, retrieved_from
+		FROM validators
+		WHERE validator_index = $1`, index).
+		Scan(&validator.PublicKey, &validator.Index, &validator.Balance, &validator.Status,
+			&validator.EffectiveBalance, &validator.ActivationEpoch, &validator.ExitEpoch,
+			&validator.ChainID, &validator.RetrievedFrom,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &validator, nil
 }

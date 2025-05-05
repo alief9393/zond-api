@@ -4,17 +4,25 @@ import (
 	"context"
 
 	"zond-api/internal/api/dto"
-	"zond-api/internal/api/repository"
+	searchRepo "zond-api/internal/api/repository/search"
 )
 
-type SearchService struct {
-	repo repository.SearchRepository
+type SearchService interface {
+	GetSuggestions(ctx context.Context, query string) ([]dto.Suggestion, error)
+	Search(ctx context.Context, query string) ([]dto.SearchResult, error)
+}
+type searchService struct {
+	repo searchRepo.SearchRepository
 }
 
-func NewSearchService(repo repository.SearchRepository) *SearchService {
-	return &SearchService{repo: repo}
+func NewSearchService(repo searchRepo.SearchRepository) SearchService {
+	return &searchService{repo: repo}
 }
 
-func (s *SearchService) Search(ctx context.Context, query string) ([]dto.SearchResult, error) {
+func (s *searchService) GetSuggestions(ctx context.Context, query string) ([]dto.Suggestion, error) {
+	return s.repo.GetSuggestions(ctx, query)
+}
+
+func (s *searchService) Search(ctx context.Context, query string) ([]dto.SearchResult, error) {
 	return s.repo.Search(ctx, query)
 }

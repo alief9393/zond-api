@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"zond-api/internal/api/dto"
-	"zond-api/internal/api/repository"
+	chainRepo "zond-api/internal/api/repository/chain"
 )
 
 type ChainService interface {
@@ -11,10 +11,10 @@ type ChainService interface {
 }
 
 type chainService struct {
-	repo repository.ChainRepo
+	repo chainRepo.ChainRepo
 }
 
-func NewChainService(repo repository.ChainRepo) ChainService {
+func NewChainService(repo chainRepo.ChainRepo) ChainService {
 	return &chainService{repo: repo}
 }
 

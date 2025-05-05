@@ -10,10 +10,10 @@ import (
 )
 
 type BlockHandler struct {
-	service service.BlockService
+	service *service.BlockService
 }
 
-func NewBlockHandler(service service.BlockService) *BlockHandler {
+func NewBlockHandler(service *service.BlockService) *BlockHandler { // Accept pointer
 	return &BlockHandler{service: service}
 }
 
@@ -46,7 +46,7 @@ func (h *BlockHandler) GetBlockByNumber(c *gin.Context) {
 }
 
 func (h *BlockHandler) GetBlockByHash(c *gin.Context) {
-	hash := c.Param("block_hash")
+	hash := c.Param("hash")
 	block, err := h.service.GetBlockByHash(c.Request.Context(), hash)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Block not found"})

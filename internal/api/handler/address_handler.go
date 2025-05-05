@@ -11,6 +11,7 @@ import (
 type AddressHandler interface {
 	GetAddressBalance(c *gin.Context)
 	GetAddressTransactions(c *gin.Context)
+	GetAddressDetails(c *gin.Context)
 }
 
 type addressHandler struct {
@@ -52,4 +53,14 @@ func (h *addressHandler) GetAddressTransactions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, transactions)
+}
+
+func (h *addressHandler) GetAddressDetails(c *gin.Context) {
+	addr := c.Param("address")
+	detail, err := h.svc.GetAddressDetails(c.Request.Context(), addr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, detail)
 }

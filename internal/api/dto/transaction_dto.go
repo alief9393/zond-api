@@ -23,3 +23,10 @@ type TransactionResponse struct {
 type TransactionsResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
+
+type TransactionMetricsResponse struct {
+	Transactions24h       int     `json:"transactions_24h"`
+	PendingTransactions1h int     `json:"pending_transactions_1h"`
+	NetworkFeeETH24h      float64 `json:"network_fee_eth_24h"`
+	AvgFeeUSD24h          float64 `json:"avg_fee_usd_24h"`
+}

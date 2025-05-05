@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"zond-api/internal/api/dto"
-	"zond-api/internal/api/repository"
+	forkRepo "zond-api/internal/api/repository/fork"
 )
 
 type ForkService interface {
@@ -11,10 +11,10 @@ type ForkService interface {
 }
 
 type forkService struct {
-	repo repository.ForkRepo
+	repo forkRepo.ForkRepo
 }
 
-func NewForkService(repo repository.ForkRepo) ForkService {
+func NewForkService(repo forkRepo.ForkRepo) ForkService {
 	return &forkService{repo: repo}
 }
 

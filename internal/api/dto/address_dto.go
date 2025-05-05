@@ -21,3 +21,10 @@ type AddressResponse struct {
 type TopAddressesResponse struct {
 	Addresses []AddressResponse `json:"addresses"`
 }
+
+type AddressDetailResponse struct {
+	Address          string  `json:"address"`
+	Balance          float64 `json:"balance"`
+	TransactionCount int     `json:"transaction_count"`
+	TotalGasUsed     int64   `json:"total_gas_used"`
+}

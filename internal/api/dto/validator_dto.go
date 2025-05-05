@@ -15,3 +15,15 @@ type ValidatorResponse struct {
 type ValidatorsResponse struct {
 	Validators []ValidatorResponse `json:"validators"`
 }
+
+type ValidatorDetailResponse struct {
+	PublicKey        string `json:"public_key"`
+	Index            int    `json:"index"`
+	Balance          int64  `json:"balance"`
+	Status           string `json:"status"`
+	EffectiveBalance int64  `json:"effective_balance"`
+	ActivationEpoch  int64  `json:"activation_epoch"`
+	ExitEpoch        int64  `json:"exit_epoch"`
+	ChainID          int    `json:"chain_id"`
+	RetrievedFrom    string `json:"retrieved_from"`
+}

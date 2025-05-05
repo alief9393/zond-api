@@ -1,18 +1,20 @@
 package service
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 
 	"zond-api/internal/api/dto"
-	"zond-api/internal/api/repository"
+	txRepo "zond-api/internal/api/repository/transaction"
+	"zond-api/internal/domain/model"
 )
 
 type TransactionService struct {
-	repo repository.TransactionRepository
+	repo txRepo.TransactionRepository
 }
 
-func NewTransactionService(repo repository.TransactionRepository) *TransactionService {
+func NewTransactionService(repo txRepo.TransactionRepository) *TransactionService {
 	return &TransactionService{repo: repo}
 }
 
@@ -90,4 +92,47 @@ func (s *TransactionService) GetTransactionByHash(txHash string) (*dto.Transacti
 		RetrievedFrom:        tx.RetrievedFrom,
 		IsCanonical:          tx.IsCanonical,
 	}, nil
+}
+
+func (s *TransactionService) GetTransactionsByBlockNumber(blockNumber int64) ([]dto.TransactionResponse, error) {
+	txs, err := s.repo.GetTransactionsByBlockNumber(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []dto.TransactionResponse
+	for _, tx := range txs {
+		toAddr := ""
+		if len(tx.ToAddress) > 0 {
+			toAddr = fmt.Sprintf("0x%x", tx.ToAddress)
+		}
+		responses = append(responses, dto.TransactionResponse{
+			TxHash:               fmt.Sprintf("0x%x", tx.TxHash),
+			BlockNumber:          tx.BlockNumber,
+			FromAddress:          fmt.Sprintf("0x%x", tx.FromAddress),
+			ToAddress:            toAddr,
+			Value:                tx.Value,
+			Gas:                  tx.Gas,
+			GasPrice:             tx.GasPrice,
+			Type:                 tx.Type,
+			ChainID:              tx.ChainID,
+			AccessList:           string(tx.AccessList),
+			MaxFeePerGas:         tx.MaxFeePerGas,
+			MaxPriorityFeePerGas: tx.MaxPriorityFeePerGas,
+			TransactionIndex:     tx.TransactionIndex,
+			CumulativeGasUsed:    tx.CumulativeGasUsed,
+			IsSuccessful:         tx.IsSuccessful,
+			RetrievedFrom:        tx.RetrievedFrom,
+			IsCanonical:          tx.IsCanonical,
+		})
+	}
+	return responses, nil
+}
+
+func (s *TransactionService) GetTransactionMetrics(ctx context.Context) (*dto.TransactionMetricsResponse, error) {
+	return s.repo.GetTransactionMetrics(ctx)
+}
+
+func (s *TransactionService) GetLatestTransactionsWithFilter(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
+	return s.repo.GetLatestTransactionsWithFilter(ctx, page, limit, method, from, to)
 }

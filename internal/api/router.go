@@ -10,7 +10,15 @@ import (
 
 	"zond-api/internal/api/dto"
 	"zond-api/internal/api/handler"
-	"zond-api/internal/api/repository"
+	addrRepo "zond-api/internal/api/repository/address"
+	blkRepo "zond-api/internal/api/repository/block"
+	chainRepo "zond-api/internal/api/repository/chain"
+	forkRepo "zond-api/internal/api/repository/fork"
+	reorgRepo "zond-api/internal/api/repository/reorg"
+	search "zond-api/internal/api/repository/search"
+	searchRepo "zond-api/internal/api/repository/search"
+	txRepo "zond-api/internal/api/repository/transaction"
+	valRepo "zond-api/internal/api/repository/validator"
 	"zond-api/internal/api/service"
 
 	"github.com/gin-gonic/gin"
@@ -63,20 +71,24 @@ func (rl *rateLimiter) getLimiter(username string, isPaid bool) *rate.Limiter {
 var globalRateLimiter = newRateLimiter()
 
 func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
-	blockRepo := repository.NewBlockRepoPG(db)
-	txRepo := repository.NewTransactionRepoPG(db)
-	addrRepo := repository.NewAddressRepoPG(db)
-	forkRepo := repository.NewForkRepoPG(db)
-	chainRepo := repository.NewChainRepoPG(db)
-	reorgRepo := repository.NewReorgRepoPG(db)
-	validatorRepo := repository.NewValidatorRepoPG(db)
+	blockRepo := blkRepo.NewBlockRepoPG(db)
+	txRepository := txRepo.NewTransactionRepoPG(db)
+	addrRepository := addrRepo.NewAddressRepoPG(db)
+	forkRepository := forkRepo.NewForkRepoPG(db)
+	chainRepository := chainRepo.NewChainRepoPG(db)
+	reorgRepository := reorgRepo.NewReorgRepoPG(db)
+	validatorRepository := valRepo.NewValidatorRepoPG(db)
+	searchRepository := searchRepo.NewSearchRepoPG(db)
+
 	blockService := service.NewBlockService(blockRepo)
-	txService := service.NewTransactionService(txRepo)
-	addrService := service.NewAddressService(addrRepo)
-	forkService := service.NewForkService(forkRepo)
-	chainService := service.NewChainService(chainRepo)
-	reorgService := service.NewReorgService(reorgRepo)
-	validatorService := service.NewValidatorService(validatorRepo)
+	txService := service.NewTransactionService(txRepository)
+	addrService := service.NewAddressService(addrRepository)
+	forkService := service.NewForkService(forkRepository)
+	chainService := service.NewChainService(chainRepository)
+	reorgService := service.NewReorgService(reorgRepository)
+	validatorService := service.NewValidatorService(validatorRepository)
+	_ = searchRepository
+
 	blockHandler := handler.NewBlockHandler(blockService)
 	txHandler := handler.NewTransactionHandler(txService)
 	addrHandler := handler.NewAddressHandler(addrService)
@@ -84,42 +96,66 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	chainHandler := handler.NewChainHandler(chainService)
 	reorgHandler := handler.NewReorgHandler(reorgService)
 	validatorHandler := handler.NewValidatorHandler(validatorService)
+	searchRepo := search.NewSearchRepoPG(db)
+	searchService := service.NewSearchService(searchRepo)
+	searchHandler := handler.NewSearchHandler(searchService)
+
 	r := gin.Default()
 	r.POST("/login", loginHandler(db))
 	r.POST("/register", registerHandler(db))
+
 	api := r.Group("/api")
 	api.Use(jwtMiddleware(jwtSecret))
+
+	searchGroup := api.Group("/search")
+	{
+		searchGroup.GET("/suggestions", searchHandler.GetSuggestions)
+	}
+
 	blocks := api.Group("/blocks")
 	{
 		blocks.GET("/latest", blockHandler.GetLatestBlocks)
 		blocks.GET("/:block_number", blockHandler.GetBlockByNumber)
+		blocks.GET("/hash/:hash", blockHandler.GetBlockByHash)
 	}
+
 	transactions := api.Group("/transactions")
 	{
 		transactions.GET("/latest", txHandler.GetLatestTransactions)
 		transactions.GET("/:tx_hash", txHandler.GetTransactionByHash)
+		transactions.GET("/block/:block_number", txHandler.GetTransactionsByBlockNumber)
+		transactions.GET("/metrics", txHandler.GetTransactionMetrics)
+		transactions.GET("/latest", txHandler.GetLatestTransactionsWithFilter)
 	}
+
 	addresses := api.Group("/addresses")
 	{
 		addresses.GET("/:address/balance", addrHandler.GetAddressBalance)
 		addresses.GET("/:address/transactions", addrHandler.GetAddressTransactions)
+		addresses.GET("/:address/details", addrHandler.GetAddressDetails)
 	}
+
 	forks := api.Group("/forks")
 	{
 		forks.GET("", forkHandler.GetForks)
 	}
+
 	chain := api.Group("/chain")
 	{
 		chain.GET("", chainHandler.GetChainInfo)
 	}
+
 	reorgs := api.Group("/reorgs")
 	{
 		reorgs.GET("", reorgHandler.GetReorgs)
 	}
+
 	validators := api.Group("/validators")
 	{
 		validators.GET("", validatorHandler.GetValidators)
+		validators.GET("/:validatorId", validatorHandler.GetValidatorByID)
 	}
+
 	api.GET("/premium", premiumHandler)
 
 	return r

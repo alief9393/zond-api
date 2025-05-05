@@ -10,6 +10,8 @@ import (
 type AddressRepo interface {
 	GetAddressBalance(ctx context.Context, address string) (*dto.AddressResponse, error)
 	GetAddressTransactions(ctx context.Context, address string) (*dto.TransactionsResponse, error)
+	GetTopAddresses(ctx context.Context, limit int) (*dto.TopAddressesResponse, error)
+	GetAddressDetails(ctx context.Context, address string) (*dto.AddressDetailResponse, error)
 }
 
 type AddressRepoPG struct {
@@ -79,4 +81,21 @@ func (r *AddressRepoPG) GetTopAddresses(ctx context.Context, limit int) (*dto.To
 		addresses = append(addresses, addr)
 	}
 	return &dto.TopAddressesResponse{Addresses: addresses}, nil
+}
+
+func (r *AddressRepoPG) GetAddressDetails(ctx context.Context, address string) (*dto.AddressDetailResponse, error) {
+	var result dto.AddressDetailResponse
+	result.Address = address
+
+	err := r.db.QueryRow(ctx, `
+		SELECT COALESCE(SUM(value), 0), COUNT(*), COALESCE(SUM(gas), 0)
+		FROM transactions
+		WHERE from_address = decode($1, 'hex') OR to_address = decode($1, 'hex')
+	`, address[2:]).Scan(&result.Balance, &result.TransactionCount, &result.TotalGasUsed)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
