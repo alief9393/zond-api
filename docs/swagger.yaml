@@ -1,0 +1,823 @@
+basePath: /api
+definitions:
+  dto.AddressDetailResponse:
+    properties:
+      address:
+        type: string
+      balance:
+        type: number
+      total_gas_used:
+        type: integer
+      transaction_count:
+        type: integer
+    type: object
+  dto.AddressResponse:
+    properties:
+      address:
+        type: string
+      balance:
+        type: string
+    type: object
+  dto.BeaconDepositResponse:
+    properties:
+      amount:
+        example: "32000000000"
+        type: string
+      block_number:
+        example: 123456
+        type: integer
+      log_index:
+        example: 5
+        type: integer
+      retrieved_from:
+        example: geth
+        type: string
+      timestamp:
+        example: "2024-05-06T14:20:00Z"
+        type: string
+      tx_hash:
+        example: 0xabc123...
+        type: string
+      validator_index:
+        example: 2940
+        type: integer
+    type: object
+  dto.BeaconDepositsPaginatedResponse:
+    properties:
+      deposits:
+        items:
+          $ref: '#/definitions/dto.BeaconDepositResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/dto.PaginationInfo'
+    type: object
+  dto.BeaconWithdrawalResponse:
+    properties:
+      amount:
+        example: "34000000000"
+        type: string
+      block_number:
+        example: 1200456
+        type: integer
+      log_index:
+        example: 7
+        type: integer
+      retrieved_from:
+        example: geth
+        type: string
+      timestamp:
+        example: "2024-05-06T14:20:00Z"
+        type: string
+      tx_hash:
+        example: 0xabc123...
+        type: string
+      validator_index:
+        example: 389
+        type: integer
+    type: object
+  dto.BeaconWithdrawalsPaginatedResponse:
+    properties:
+      pagination:
+        $ref: '#/definitions/dto.PaginationInfo'
+      withdrawals:
+        items:
+          $ref: '#/definitions/dto.BeaconWithdrawalResponse'
+        type: array
+    type: object
+  dto.BlockResponse:
+    properties:
+      base_fee_per_gas:
+        example: 1000000000
+        type: integer
+      block_hash:
+        example: 0xabc123...
+        type: string
+      block_number:
+        example: 123456
+        type: integer
+      canonical:
+        example: true
+        type: boolean
+      chain_id:
+        example: 1
+        type: integer
+      extra_data:
+        example: 0x...
+        type: string
+      gas_limit:
+        example: "30000000"
+        type: string
+      gas_used:
+        example: "21000"
+        type: string
+      logs_bloom:
+        example: 0x...
+        type: string
+      miner_address:
+        example: 0x1a2b...
+        type: string
+      parent_hash:
+        example: 0xdeadbeef...
+        type: string
+      receipts_root:
+        example: 0xreceipt...
+        type: string
+      retrieved_from:
+        example: geth
+        type: string
+      size:
+        example: 1200
+        type: integer
+      state_root:
+        example: 0xstate...
+        type: string
+      timestamp:
+        example: "2024-05-06T10:00:00Z"
+        type: string
+      transaction_count:
+        example: 15
+        type: integer
+      transactions_root:
+        example: 0xroot...
+        type: string
+    type: object
+  dto.BlocksResponse:
+    properties:
+      blocks:
+        items:
+          $ref: '#/definitions/dto.BlockResponse'
+        type: array
+    type: object
+  dto.ChainResponse:
+    properties:
+      chain_id:
+        example: 1
+        type: integer
+      latest_block:
+        example: 1245678
+        type: integer
+      retrieved_from:
+        example: geth
+        type: string
+      total_blocks:
+        example: 1245678
+        type: integer
+    type: object
+  dto.ForkResponse:
+    properties:
+      block_number:
+        example: 17890000
+        type: integer
+      chain_id:
+        example: 1
+        type: integer
+      fork_name:
+        example: Shanghai
+        type: string
+      retrieved_from:
+        example: geth
+        type: string
+      timestamp:
+        example: "2024-05-06T10:00:00Z"
+        type: string
+    type: object
+  dto.ForksResponse:
+    properties:
+      forks:
+        items:
+          $ref: '#/definitions/dto.ForkResponse'
+        type: array
+    type: object
+  dto.LoginRequest:
+    properties:
+      is_paid:
+        type: boolean
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.LoginResponse:
+    properties:
+      is_paid:
+        type: boolean
+      token:
+        type: string
+    type: object
+  dto.PaginationInfo:
+    properties:
+      has_next:
+        example: true
+        type: boolean
+      limit:
+        example: 10
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 100
+        type: integer
+    type: object
+  dto.ReorgResponse:
+    properties:
+      block_number:
+        example: 1234567
+        type: integer
+      chain_id:
+        example: 1
+        type: integer
+      depth:
+        example: 2
+        type: integer
+      new_block_hash:
+        example: 0xnewhash...
+        type: string
+      old_block_hash:
+        example: 0xoldhash...
+        type: string
+      retrieved_from:
+        example: nethermind
+        type: string
+      timestamp:
+        example: "2024-05-06T12:00:00Z"
+        type: string
+    type: object
+  dto.ReorgsResponse:
+    properties:
+      reorgs:
+        items:
+          $ref: '#/definitions/dto.ReorgResponse'
+        type: array
+    type: object
+  dto.SearchSuggestionsResponse:
+    properties:
+      suggestions:
+        items:
+          $ref: '#/definitions/dto.Suggestion'
+        type: array
+    type: object
+  dto.Suggestion:
+    properties:
+      type:
+        example: transaction
+        type: string
+      value:
+        example: 0xabc123...
+        type: string
+    type: object
+  dto.TransactionDTO:
+    properties:
+      block_number:
+        type: integer
+      from:
+        type: string
+      hash:
+        type: string
+      to:
+        type: string
+      value:
+        type: string
+    type: object
+  dto.ValidatorDetailResponse:
+    properties:
+      activation_epoch:
+        example: 194
+        type: integer
+      balance:
+        example: 32000000000
+        type: integer
+      chain_id:
+        example: 1
+        type: integer
+      effective_balance:
+        example: 32000000000
+        type: integer
+      exit_epoch:
+        example: 0
+        type: integer
+      index:
+        example: 1234
+        type: integer
+      public_key:
+        example: 0xabc123...
+        type: string
+      retrieved_from:
+        example: prysm
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  dto.ValidatorResponse:
+    properties:
+      activation_epoch:
+        example: 194
+        type: integer
+      balance:
+        example: "32000000000"
+        type: string
+      chain_id:
+        example: 1
+        type: integer
+      effective_balance:
+        example: "32000000000"
+        type: string
+      exit_epoch:
+        example: 0
+        type: integer
+      index:
+        example: 1234
+        type: integer
+      public_key:
+        example: 0xabc123...
+        type: string
+      retrieved_from:
+        example: lighthouse
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  dto.ValidatorsResponse:
+    properties:
+      validators:
+        items:
+          $ref: '#/definitions/dto.ValidatorResponse'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is the API documentation for the Zond Explorer
+  title: Zond Explorer API
+  version: "1.0"
+paths:
+  /address/{address}/balance:
+    get:
+      consumes:
+      - application/json
+      description: Get the balance information of an address (admin only)
+      parameters:
+      - description: Address
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AddressResponse'
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get address balance
+      tags:
+      - Address
+  /address/{address}/details:
+    get:
+      consumes:
+      - application/json
+      description: Get full details of a specific address
+      parameters:
+      - description: Address
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AddressDetailResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get address details
+      tags:
+      - Address
+  /address/{address}/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Get list of transactions related to the given address
+      parameters:
+      - description: Address
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.TransactionDTO'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get address transactions
+      tags:
+      - Address
+  /api/blocks/{block_number}:
+    get:
+      description: Retrieve details of a block using its number
+      parameters:
+      - description: Block number
+        in: path
+        name: block_number
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BlockResponse'
+        "400":
+          description: Invalid block number
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Block not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get block by number
+      tags:
+      - Blocks
+  /api/blocks/hash/{hash}:
+    get:
+      description: Retrieve block details using its hash
+      parameters:
+      - description: Block hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BlockResponse'
+        "404":
+          description: Block not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get block by hash
+      tags:
+      - Blocks
+  /api/blocks/latest:
+    get:
+      description: Retrieve a paginated list of recent blocks
+      parameters:
+      - default: 10
+        description: Number of blocks to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BlocksResponse'
+        "500":
+          description: Failed to fetch blocks
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the latest blocks
+      tags:
+      - Blocks
+  /api/chain:
+    get:
+      description: Retrieve general information about the current chain
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ChainResponse'
+        "500":
+          description: Failed to fetch chain info
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get chain info
+      tags:
+      - Chain
+  /api/forks:
+    get:
+      description: Retrieve all recorded chain forks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForksResponse'
+        "500":
+          description: Failed to fetch forks
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get forks
+      tags:
+      - Forks
+  /api/reorgs:
+    get:
+      description: Retrieve a list of chain reorganization events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReorgsResponse'
+        "500":
+          description: Failed to fetch reorgs
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get reorgs
+      tags:
+      - Reorgs
+  /api/search/suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Return suggestions based on a partial query input (e.g. address,
+        tx hash, block number)
+      parameters:
+      - description: Search input string (partial hash, address, or block number)
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SearchSuggestionsResponse'
+        "400":
+          description: Query parameter required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get search suggestions
+      tags:
+      - Search
+  /api/validators:
+    get:
+      description: Retrieve a list of all active validators
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ValidatorsResponse'
+        "500":
+          description: Failed to fetch validators
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get validators
+      tags:
+      - Validators
+  /api/validators/{validatorId}:
+    get:
+      description: Retrieve a specific validator by its index
+      parameters:
+      - description: Validator index
+        in: path
+        name: validatorId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ValidatorDetailResponse'
+        "400":
+          description: Invalid validator index
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Validator not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get validator by ID
+      tags:
+      - Validators
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token if credentials are valid
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to generate token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with username and password
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Username already exists or invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to hash password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register new user
+      tags:
+      - Auth
+  /beacon-deposits:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of beacon chain deposits
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BeaconDepositsPaginatedResponse'
+        "500":
+          description: Failed to fetch beacon deposits
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get beacon deposits
+      tags:
+      - Beacon
+  /beacon-withdrawals:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of beacon chain withdrawals
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BeaconWithdrawalsPaginatedResponse'
+        "500":
+          description: Failed to retrieve beacon withdrawals
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get beacon withdrawals
+      tags:
+      - Beacon
+swagger: "2.0"

@@ -152,3 +152,11 @@ func (s *TransactionService) GetPendingTransactions(ctx context.Context, page, l
 	}
 	return transactions, count, nil
 }
+
+func (s *TransactionService) GetContractTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
+	return s.repo.GetContractTransactions(ctx, page, limit, method, from, to)
+}
+
+func (s *TransactionService) CountContractTransactions(ctx context.Context, method, from, to string) (int, error) {
+	return s.repo.CountContractTransactions(ctx, method, from, to)
+}

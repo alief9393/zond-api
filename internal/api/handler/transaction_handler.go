@@ -194,3 +194,58 @@ func (h *TransactionHandler) GetPendingTransactions(c *gin.Context) {
 	})
 
 }
+
+func (h *TransactionHandler) GetContractTransactions(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	method := c.Query("method")
+	from := c.Query("from")
+	to := c.Query("to")
+
+	ctx := c.Request.Context()
+
+	txs, err := h.service.GetContractTransactions(ctx, page, limit, method, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get contract transactions"})
+		return
+	}
+
+	count, err := h.service.CountContractTransactions(ctx, method, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count contract transactions"})
+		return
+	}
+
+	var txResponses []dto.TransactionResponse
+	for _, tx := range txs {
+		txResponses = append(txResponses, dto.TransactionResponse{
+			TxHash:               fmt.Sprintf("0x%x", tx.TxHash),
+			BlockNumber:          tx.BlockNumber,
+			FromAddress:          fmt.Sprintf("0x%x", tx.FromAddress),
+			ToAddress:            fmt.Sprintf("0x%x", tx.ToAddress),
+			Value:                tx.Value,
+			Gas:                  tx.Gas,
+			GasPrice:             tx.GasPrice,
+			Type:                 tx.Type,
+			ChainID:              tx.ChainID,
+			AccessList:           string(tx.AccessList),
+			MaxFeePerGas:         tx.MaxFeePerGas,
+			MaxPriorityFeePerGas: tx.MaxPriorityFeePerGas,
+			TransactionIndex:     tx.TransactionIndex,
+			CumulativeGasUsed:    tx.CumulativeGasUsed,
+			IsSuccessful:         tx.IsSuccessful,
+			RetrievedFrom:        tx.RetrievedFrom,
+			IsCanonical:          tx.IsCanonical,
+		})
+	}
+
+	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
+		Transactions: txResponses,
+		Pagination: dto.PaginationInfo{
+			Page:    page,
+			Limit:   limit,
+			Total:   count,
+			HasNext: (page * limit) < count,
+		},
+	})
+}

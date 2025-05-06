@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AddressHandler defines address-related endpoints
 type AddressHandler interface {
 	GetAddressBalance(c *gin.Context)
 	GetAddressTransactions(c *gin.Context)
@@ -22,8 +23,20 @@ func NewAddressHandler(svc service.AddressService) AddressHandler {
 	return &addressHandler{svc: svc}
 }
 
+// GetAddressBalance godoc
+// @Summary      Get address balance
+// @Description  Get the balance information of an address (admin only)
+// @Tags         Address
+// @Accept       json
+// @Produce      json
+// @Param        address  path      string  true  "Address"
+// @Success      200      {object}  dto.AddressResponse
+// @Failure      403      {object}  map[string]string "Admin access required"
+// @Failure      404      {object}  map[string]string "Address not found"
+// @Failure      500      {object}  map[string]string "Internal server error"
+// @Security     ApiKeyAuth
+// @Router       /address/{address}/balance [get]
 func (h *addressHandler) GetAddressBalance(c *gin.Context) {
-	// Restrict to admin users
 	role, exists := c.Get("role")
 	if !exists || role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
@@ -44,6 +57,16 @@ func (h *addressHandler) GetAddressBalance(c *gin.Context) {
 	c.JSON(http.StatusOK, addr)
 }
 
+// GetAddressTransactions godoc
+// @Summary      Get address transactions
+// @Description  Get list of transactions related to the given address
+// @Tags         Address
+// @Accept       json
+// @Produce      json
+// @Param        address  path      string  true  "Address"
+// @Success      200      {array}   dto.TransactionDTO
+// @Failure      500      {object}  map[string]string "Internal server error"
+// @Router       /address/{address}/transactions [get]
 func (h *addressHandler) GetAddressTransactions(c *gin.Context) {
 	address := c.Param("address")
 	transactions, err := h.svc.GetAddressTransactions(c.Request.Context(), address)
@@ -55,6 +78,16 @@ func (h *addressHandler) GetAddressTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
+// GetAddressDetails godoc
+// @Summary      Get address details
+// @Description  Get full details of a specific address
+// @Tags         Address
+// @Accept       json
+// @Produce      json
+// @Param        address  path      string  true  "Address"
+// @Success      200      {object}  dto.AddressDetailResponse
+// @Failure      500      {object}  map[string]string "Internal server error"
+// @Router       /address/{address}/details [get]
 func (h *addressHandler) GetAddressDetails(c *gin.Context) {
 	addr := c.Param("address")
 	detail, err := h.svc.GetAddressDetails(c.Request.Context(), addr)

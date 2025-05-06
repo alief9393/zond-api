@@ -5,8 +5,8 @@ type SearchResult struct {
 	Value interface{} `json:"value"`
 }
 type Suggestion struct {
-	Type  string `json:"type"`  // e.g., "address", "transaction", "block", etc.
-	Value string `json:"value"` // e.g., hash, address, number
+	Type  string `json:"type" example:"transaction"`
+	Value string `json:"value" example:"0xabc123..."`
 }
 
 type SearchSuggestionsResponse struct {

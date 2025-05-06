@@ -282,3 +282,97 @@ func (r *TransactionRepoPG) GetPendingTransactions(ctx context.Context, page, li
 
 	return transactions, nil
 }
+
+func (r *TransactionRepoPG) GetContractTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error) {
+	offset := (page - 1) * limit
+	var transactions []model.Transaction
+
+	query := `
+		SELECT tx_hash, block_number, from_address, to_address, value, gas, gas_price, type,
+		       chain_id, access_list, max_fee_per_gas, max_priority_fee_per_gas, transaction_index,
+		       cumulative_gas_used, is_successful, retrieved_from, is_canonical
+		FROM transactions
+		WHERE to_address IS NOT NULL
+		AND is_contract = TRUE
+	`
+
+	args := []interface{}{}
+	argPos := 1
+
+	if method != "" {
+		query += fmt.Sprintf(" AND method = $%d", argPos)
+		args = append(args, method)
+		argPos++
+	}
+
+	if from != "" {
+		query += fmt.Sprintf(" AND encode(from_address, 'hex') = $%d", argPos)
+		args = append(args, from)
+		argPos++
+	}
+
+	if to != "" {
+		query += fmt.Sprintf(" AND encode(to_address, 'hex') = $%d", argPos)
+		args = append(args, to)
+		argPos++
+	}
+
+	query += fmt.Sprintf(" ORDER BY block_number DESC OFFSET $%d LIMIT $%d", argPos, argPos+1)
+	args = append(args, offset, limit)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tx model.Transaction
+		err := rows.Scan(
+			&tx.TxHash, &tx.BlockNumber, &tx.FromAddress, &tx.ToAddress, &tx.Value, &tx.Gas,
+			&tx.GasPrice, &tx.Type, &tx.ChainID, &tx.AccessList, &tx.MaxFeePerGas,
+			&tx.MaxPriorityFeePerGas, &tx.TransactionIndex, &tx.CumulativeGasUsed,
+			&tx.IsSuccessful, &tx.RetrievedFrom, &tx.IsCanonical,
+		)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
+}
+
+func (r *TransactionRepoPG) CountContractTransactions(ctx context.Context, method, from, to string) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM transactions
+		WHERE to_address IS NOT NULL
+		AND is_contract = TRUE
+	`
+
+	args := []interface{}{}
+	argPos := 1
+
+	if method != "" {
+		query += fmt.Sprintf(" AND method = $%d", argPos)
+		args = append(args, method)
+		argPos++
+	}
+
+	if from != "" {
+		query += fmt.Sprintf(" AND encode(from_address, 'hex') = $%d", argPos)
+		args = append(args, from)
+		argPos++
+	}
+
+	if to != "" {
+		query += fmt.Sprintf(" AND encode(to_address, 'hex') = $%d", argPos)
+		args = append(args, to)
+		argPos++
+	}
+
+	var count int
+	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
+	return count, err
+}

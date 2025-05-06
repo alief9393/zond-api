@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"os"
-
 	"time"
 	"zond-api/internal/api/dto"
 
@@ -17,6 +16,18 @@ type AuthHandler struct {
 	DB *pgx.Conn
 }
 
+// Login godoc
+// @Summary      User login
+// @Description  Authenticate user and return JWT token if credentials are valid
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.LoginRequest  true  "Login credentials"
+// @Success      200      {object}  dto.LoginResponse
+// @Failure      400      {object}  map[string]string "Invalid request format"
+// @Failure      401      {object}  map[string]string "Invalid credentials"
+// @Failure      500      {object}  map[string]string "Failed to generate token"
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -54,6 +65,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(200, dto.LoginResponse{Token: tokenString, IsPaid: isPaid})
 }
 
+// Register godoc
+// @Summary      Register new user
+// @Description  Create a new user with username and password
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.LoginRequest  true  "User registration data"
+// @Success      201      {object}  map[string]string "User created successfully"
+// @Failure      400      {object}  map[string]string "Username already exists or invalid request"
+// @Failure      500      {object}  map[string]string "Failed to hash password"
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
