@@ -24,13 +24,6 @@ type TransactionsResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
 
-type PaginationInfo struct {
-	Page    int  `json:"page" example:"1"`
-	Limit   int  `json:"limit" example:"10"`
-	Total   int  `json:"total" example:"100"`
-	HasNext bool `json:"has_next" example:"true"`
-}
-
 type TransactionsPaginatedResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 	Pagination   PaginationInfo        `json:"pagination"`
@@ -41,4 +34,27 @@ type TransactionMetricsResponse struct {
 	PendingTransactions1h int     `json:"pending_transactions_1h" example:"135"`
 	NetworkFeeETH24h      float64 `json:"network_fee_eth_24h" example:"25.67"`
 	AvgFeeUSD24h          float64 `json:"avg_fee_usd_24h" example:"1.25"`
+}
+
+type DailyTransactionStat struct {
+	Date  string `json:"date" example:"2025-05-07"`
+	Count int    `json:"count" example:"12345"`
+}
+
+type DailyTransactionStatsResponse struct {
+	Data []DailyTransactionStat `json:"data"`
+}
+
+type TPSStatResponse struct {
+	AverageTPS float64 `json:"average_tps" example:"12.45"`
+}
+
+type DailyFeeStat struct {
+	Date          string  `json:"date" example:"2025-05-07"`
+	NetworkFeeETH float64 `json:"network_fee_eth" example:"1.23"`
+	AvgFeeUSD     float64 `json:"avg_fee_usd" example:"0.56"`
+}
+
+type DailyFeeStatsResponse struct {
+	Data []DailyFeeStat `json:"data"`
 }

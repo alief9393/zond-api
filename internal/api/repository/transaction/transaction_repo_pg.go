@@ -376,3 +376,77 @@ func (r *TransactionRepoPG) CountContractTransactions(ctx context.Context, metho
 	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
 	return count, err
 }
+
+func (r *TransactionRepoPG) GetDailyTransactionStats(days int) ([]dto.DailyTransactionStat, error) {
+	rows, err := r.db.Query(context.Background(), `
+		SELECT to_char(block_timestamp::date, 'YYYY-MM-DD') AS date, COUNT(*) AS count
+		FROM transactions
+		WHERE block_timestamp >= current_date - $1::int
+		GROUP BY date
+		ORDER BY date DESC
+	`, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []dto.DailyTransactionStat
+	for rows.Next() {
+		var stat dto.DailyTransactionStat
+		if err := rows.Scan(&stat.Date, &stat.Count); err != nil {
+			return nil, err
+		}
+		stats = append(stats, stat)
+	}
+
+	return stats, nil
+}
+
+func (r *TransactionRepoPG) GetAverageTPS(lastNBlocks int) (float64, error) {
+	row := r.db.QueryRow(context.Background(), `
+		WITH recent_blocks AS (
+			SELECT block_number, block_timestamp, transaction_count
+			FROM blocks
+			ORDER BY block_number DESC
+			LIMIT $1
+		)
+		SELECT 
+			COALESCE(SUM(transaction_count)::float / EXTRACT(EPOCH FROM MAX(block_timestamp) - MIN(block_timestamp)), 0)
+		FROM recent_blocks
+		WHERE MAX(block_timestamp) > MIN(block_timestamp)
+	`, lastNBlocks)
+
+	var tps float64
+	err := row.Scan(&tps)
+	if err != nil {
+		return 0, err
+	}
+	return tps, nil
+}
+
+func (r *TransactionRepoPG) GetDailyFeeStats(days int) ([]dto.DailyFeeStat, error) {
+	rows, err := r.db.Query(context.Background(), `
+		SELECT 
+			TO_CHAR(block_timestamp::date, 'YYYY-MM-DD') AS date,
+			SUM(fee_eth) AS total_eth,
+			AVG(fee_usd) AS avg_usd
+		FROM transactions
+		WHERE block_timestamp >= current_date - $1::int
+		GROUP BY date
+		ORDER BY date ASC
+	`, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []dto.DailyFeeStat
+	for rows.Next() {
+		var stat dto.DailyFeeStat
+		if err := rows.Scan(&stat.Date, &stat.NetworkFeeETH, &stat.AvgFeeUSD); err != nil {
+			return nil, err
+		}
+		stats = append(stats, stat)
+	}
+	return stats, nil
+}

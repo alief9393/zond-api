@@ -22,17 +22,19 @@ func NewBlockHandler(service *service.BlockService) *BlockHandler {
 // @Description  Retrieve a paginated list of recent blocks
 // @Tags         Blocks
 // @Produce      json
-// @Param        limit   query     int  false  "Number of blocks to return"  default(10)
-// @Param        offset  query     int  false  "Pagination offset"           default(0)
-// @Success      200     {object}  dto.BlocksResponse
+// @Param        page    query     int  false  "Page number"     default(1)
+// @Param        limit   query     int  false  "Items per page"  default(10)
+// @Success      200     {object}  dto.BlocksPaginatedResponse
 // @Failure      500     {object}  map[string]string "Failed to fetch blocks"
 // @Router       /api/blocks/latest [get]
 func (h *BlockHandler) GetLatestBlocks(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
-	offsetStr := c.DefaultQuery("offset", "0")
+
+	page, _ := strconv.Atoi(pageStr)
 	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
-	blocks, err := h.service.GetLatestBlocks(limit, offset)
+
+	blocks, err := h.service.GetLatestBlocks(c.Request.Context(), page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch blocks"})
 		return

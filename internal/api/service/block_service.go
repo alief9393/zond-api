@@ -16,10 +16,10 @@ func NewBlockService(repo blockRepo.BlockRepository) *BlockService {
 	return &BlockService{repo: repo}
 }
 
-func (s *BlockService) GetLatestBlocks(limit, offset int) (dto.BlocksResponse, error) {
-	blocks, err := s.repo.GetLatestBlocks(limit, offset)
+func (s *BlockService) GetLatestBlocks(ctx context.Context, page, limit int) (dto.BlocksPaginatedResponse, error) {
+	blocks, total, err := s.repo.GetPaginatedBlocks(ctx, page, limit)
 	if err != nil {
-		return dto.BlocksResponse{}, err
+		return dto.BlocksPaginatedResponse{}, err
 	}
 
 	var blockResponses []dto.BlockResponse
@@ -45,7 +45,15 @@ func (s *BlockService) GetLatestBlocks(limit, offset int) (dto.BlocksResponse, e
 			RetrievedFrom:    block.RetrievedFrom,
 		})
 	}
-	return dto.BlocksResponse{Blocks: blockResponses}, nil
+
+	return dto.BlocksPaginatedResponse{
+		Blocks: blockResponses,
+		Pagination: dto.PaginationInfo{
+			Total: total,
+			Page:  page,
+			Limit: limit,
+		},
+	}, nil
 }
 
 func (s *BlockService) GetBlockByNumber(blockNumber int64) (*dto.BlockResponse, error) {
@@ -75,10 +83,10 @@ func (s *BlockService) GetBlockByNumber(blockNumber int64) (*dto.BlockResponse, 
 	}, nil
 }
 
-func (s *BlockService) GetForkedBlocks(limit, offset int) (dto.BlocksResponse, error) {
+func (s *BlockService) GetForkedBlocks(limit, offset int) (dto.BlocksPaginatedResponse, error) {
 	blocks, err := s.repo.GetForkedBlocks(limit, offset)
 	if err != nil {
-		return dto.BlocksResponse{}, err
+		return dto.BlocksPaginatedResponse{}, err
 	}
 
 	var blockResponses []dto.BlockResponse
@@ -102,9 +110,18 @@ func (s *BlockService) GetForkedBlocks(limit, offset int) (dto.BlocksResponse, e
 			LogsBloom:        fmt.Sprintf("0x%x", block.LogsBloom),
 			ChainID:          block.ChainID,
 			RetrievedFrom:    block.RetrievedFrom,
+			ReorgDepth:       block.ReorgDepth,
 		})
 	}
-	return dto.BlocksResponse{Blocks: blockResponses}, nil
+
+	return dto.BlocksPaginatedResponse{
+		Blocks: blockResponses,
+		Pagination: dto.PaginationInfo{
+			Total: len(blockResponses),
+			Page:  offset/limit + 1,
+			Limit: limit,
+		},
+	}, nil
 }
 
 func (s *BlockService) GetBlockByHash(ctx context.Context, hash string) (*dto.BlockResponse, error) {

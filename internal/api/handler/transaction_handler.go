@@ -19,6 +19,18 @@ func NewTransactionHandler(service *service.TransactionService) *TransactionHand
 	return &TransactionHandler{service: service}
 }
 
+// GetLatestTransactions godoc
+// @Summary      Get latest transactions
+// @Description  Retrieve the latest transactions with pagination
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        limit   query     int  false  "Number of items per page"
+// @Param        offset  query     int  false  "Offset from the beginning"
+// @Success      200     {object}  dto.TransactionsResponse
+// @Failure      400     {object}  ErrorResponse
+// @Failure      500     {object}  ErrorResponse
+// @Router       /transactions/latest [get]
 func (h *TransactionHandler) GetLatestTransactions(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil || limit <= 0 {
@@ -41,6 +53,17 @@ func (h *TransactionHandler) GetLatestTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetTransactionByHash godoc
+// @Summary      Get transaction by hash
+// @Description  Retrieve transaction details using the transaction hash
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        tx_hash  path      string  true  "Transaction Hash"
+// @Success      200      {object}  dto.TransactionResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      404      {object}  ErrorResponse
+// @Router       /transactions/{tx_hash} [get]
 func (h *TransactionHandler) GetTransactionByHash(c *gin.Context) {
 	txHash := c.Param("tx_hash")
 	if len(txHash) == 0 {
@@ -61,6 +84,17 @@ func (h *TransactionHandler) GetTransactionByHash(c *gin.Context) {
 	c.JSON(http.StatusOK, tx)
 }
 
+// GetTransactionsByBlockNumber godoc
+// @Summary      Get transactions by block number
+// @Description  Retrieve transactions included in a specific block
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        block_number  path      int  true  "Block Number"
+// @Success      200           {object}  dto.TransactionsResponse
+// @Failure      400           {object}  ErrorResponse
+// @Failure      500           {object}  ErrorResponse
+// @Router       /transactions/block/{block_number} [get]
 func (h *TransactionHandler) GetTransactionsByBlockNumber(c *gin.Context) {
 	blockNumberStr := c.Param("block_number")
 	blockNumber, err := strconv.ParseInt(blockNumberStr, 10, 64)
@@ -78,6 +112,15 @@ func (h *TransactionHandler) GetTransactionsByBlockNumber(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TransactionsResponse{Transactions: txs})
 }
 
+// GetTransactionMetrics godoc
+// @Summary      Get transaction metrics
+// @Description  Fetch aggregated metrics about transactions
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  dto.TransactionMetricsResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /transactions/metrics [get]
 func (h *TransactionHandler) GetTransactionMetrics(c *gin.Context) {
 	metrics, err := h.service.GetTransactionMetrics(c.Request.Context())
 	if err != nil {
@@ -87,6 +130,20 @@ func (h *TransactionHandler) GetTransactionMetrics(c *gin.Context) {
 	c.JSON(http.StatusOK, metrics)
 }
 
+// GetLatestTransactionsWithFilter godoc
+// @Summary      Get filtered transactions
+// @Description  Retrieve latest transactions with optional method/from/to filters
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        page    query     int     false  "Page number"
+// @Param        limit   query     int     false  "Limit per page"
+// @Param        method  query     string  false  "Method name"
+// @Param        from    query     string  false  "From address"
+// @Param        to      query     string  false  "To address"
+// @Success      200     {object}  dto.TransactionsPaginatedResponse
+// @Failure      500     {object}  ErrorResponse
+// @Router       /transactions [get]
 func (h *TransactionHandler) GetLatestTransactionsWithFilter(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -139,14 +196,27 @@ func (h *TransactionHandler) GetLatestTransactionsWithFilter(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
 		Transactions: txResponses,
 		Pagination: dto.PaginationInfo{
-			Page:    page,
-			Limit:   limit,
-			Total:   total,
-			HasNext: page*limit < total,
+			Page:  page,
+			Limit: limit,
+			Total: total,
 		},
 	})
 }
 
+// GetPendingTransactions godoc
+// @Summary      Get pending transactions
+// @Description  Retrieve list of pending transactions
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        page    query     int     false  "Page number"
+// @Param        limit   query     int     false  "Limit per page"
+// @Param        method  query     string  false  "Method name"
+// @Param        from    query     string  false  "From address"
+// @Param        to      query     string  false  "To address"
+// @Success      200     {object}  dto.TransactionsPaginatedResponse
+// @Failure      500     {object}  ErrorResponse
+// @Router       /transactions/pending [get]
 func (h *TransactionHandler) GetPendingTransactions(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -186,15 +256,28 @@ func (h *TransactionHandler) GetPendingTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
 		Transactions: txResponses,
 		Pagination: dto.PaginationInfo{
-			Page:    page,
-			Limit:   limit,
-			Total:   count,
-			HasNext: (page * limit) < count,
+			Page:  page,
+			Limit: limit,
+			Total: count,
 		},
 	})
 
 }
 
+// GetContractTransactions godoc
+// @Summary      Get contract transactions
+// @Description  Retrieve contract interactions with filters and pagination
+// @Tags         Transactions
+// @Accept       json
+// @Produce      json
+// @Param        page    query     int     false  "Page number"
+// @Param        limit   query     int     false  "Limit per page"
+// @Param        method  query     string  false  "Method name"
+// @Param        from    query     string  false  "From address"
+// @Param        to      query     string  false  "To address"
+// @Success      200     {object}  dto.TransactionsPaginatedResponse
+// @Failure      500     {object}  ErrorResponse
+// @Router       /transactions/contract [get]
 func (h *TransactionHandler) GetContractTransactions(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -242,10 +325,89 @@ func (h *TransactionHandler) GetContractTransactions(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TransactionsPaginatedResponse{
 		Transactions: txResponses,
 		Pagination: dto.PaginationInfo{
-			Page:    page,
-			Limit:   limit,
-			Total:   count,
-			HasNext: (page * limit) < count,
+			Page:  page,
+			Limit: limit,
+			Total: count,
 		},
 	})
+}
+
+// GetDailyTransactionStats godoc
+// @Summary      Get daily transaction stats
+// @Description  Returns the number of transactions per day for the last N days
+// @Tags         Transactions
+// @Produce      json
+// @Param        days  query     int  false  "Number of days" default(14)
+// @Success      200   {object}  dto.DailyTransactionStatsResponse
+// @Failure      400   {object}  dto.ErrorResponse
+// @Failure      500   {object}  dto.ErrorResponse
+// @Router       /transactions/stats/daily [get]
+func (h *TransactionHandler) GetDailyTransactionStats(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "14")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid days parameter"})
+		return
+	}
+
+	stats, err := h.service.GetDailyTransactionStats(days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch daily stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.DailyTransactionStatsResponse{Data: stats})
+}
+
+// GetTPSStats godoc
+// @Summary      Get average TPS
+// @Description  Calculate average transactions per second based on latest blocks
+// @Tags         Transactions
+// @Produce      json
+// @Param        blocks  query     int  false  "Number of recent blocks to calculate TPS from" default(100)
+// @Success      200     {object}  dto.TPSStatResponse
+// @Failure      500     {object}  dto.ErrorResponse
+// @Router       /transactions/stats/tps [get]
+func (h *TransactionHandler) GetTPSStats(c *gin.Context) {
+	blockCountStr := c.DefaultQuery("blocks", "100")
+	blockCount, err := strconv.Atoi(blockCountStr)
+	if err != nil || blockCount <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid blocks parameter"})
+		return
+	}
+
+	tps, err := h.service.GetAverageTPS(blockCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to calculate TPS"})
+		return
+	}
+
+	c.JSON(http.StatusOK, tps)
+}
+
+// GetDailyFeeStats godoc
+// @Summary      Get daily fee stats
+// @Description  Returns total fee in ETH and average fee in USD per day
+// @Tags         Transactions
+// @Produce      json
+// @Param        days  query     int  false  "Number of days to include" default(14)
+// @Success      200   {object}  dto.DailyFeeStatsResponse
+// @Failure      400   {object}  dto.ErrorResponse
+// @Failure      500   {object}  dto.ErrorResponse
+// @Router       /transactions/stats/fee/daily [get]
+func (h *TransactionHandler) GetDailyFeeStats(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "14")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid days parameter"})
+		return
+	}
+
+	stats, err := h.service.GetDailyFeeStats(days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve fee stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.DailyFeeStatsResponse{Data: stats})
 }

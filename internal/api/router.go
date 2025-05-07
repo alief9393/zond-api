@@ -10,9 +10,11 @@ import (
 
 	"zond-api/internal/api/dto"
 	"zond-api/internal/api/handler"
+	aaRepo "zond-api/internal/api/repository/account_abstraction"
 	addrRepo "zond-api/internal/api/repository/address"
 	beaconDepositRepo "zond-api/internal/api/repository/beacon_deposit"
 	beaconWithdrawalRepo "zond-api/internal/api/repository/beacon_withdrawal"
+	blobRepo "zond-api/internal/api/repository/blob"
 	blkRepo "zond-api/internal/api/repository/block"
 	chainRepo "zond-api/internal/api/repository/chain"
 	forkRepo "zond-api/internal/api/repository/fork"
@@ -86,6 +88,8 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	beaconDepositRepo := beaconDepositRepo.NewBeaconDepositRepoPG(db)
 	searchRepo := searchRepo.NewSearchRepoPG(db)
 	bcWithdrawalRepo := beaconWithdrawalRepo.NewBeaconWithdrawalRepoPG(db)
+	blobRepo := blobRepo.NewBlobRepoPG(db)
+	aaRepo := aaRepo.NewAccountAbstractionRepoPG(db)
 
 	blockService := service.NewBlockService(blockRepo)
 	txService := service.NewTransactionService(txRepository)
@@ -97,6 +101,8 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	beaconDepositService := service.NewBeaconDepositService(beaconDepositRepo)
 	searchService := service.NewSearchService(searchRepo)
 	bcWithdrawalSvc := service.NewBeaconWithdrawalService(bcWithdrawalRepo)
+	blobSvc := service.NewBlobService(blobRepo)
+	aaSvc := service.NewAccountAbstractionService(aaRepo)
 	_ = searchRepository
 
 	blockHandler := handler.NewBlockHandler(blockService)
@@ -109,6 +115,8 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	searchHandler := handler.NewSearchHandler(searchService)
 	beaconDepositHandler := handler.NewBeaconDepositHandler(beaconDepositService)
 	beaconWithdrawalHandler := handler.NewBeaconWithdrawalHandler(bcWithdrawalSvc)
+	blobHandler := handler.NewBlobHandler(blobSvc)
+	aaHandler := handler.NewAccountAbstractionHandler(aaSvc)
 
 	r := gin.Default()
 	r.POST("/login", loginHandler(db))
@@ -136,6 +144,9 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 		transactions.GET("/block/:block_number", txHandler.GetTransactionsByBlockNumber)
 		transactions.GET("/metrics", txHandler.GetTransactionMetrics)
 		transactions.GET("/contract", txHandler.GetContractTransactions)
+		transactions.GET("/stats/daily", txHandler.GetDailyTransactionStats)
+		transactions.GET("/stats/tps", txHandler.GetTPSStats)
+		transactions.GET("/stats/fee/daily", txHandler.GetDailyFeeStats)
 	}
 
 	addresses := api.Group("/addresses")
@@ -174,6 +185,18 @@ func SetupRouter(db *pgxpool.Pool, jwtSecret string) *gin.Engine {
 	beaconWithdrawals := api.Group("/beacon-withdrawals")
 	{
 		beaconWithdrawals.GET("/", beaconWithdrawalHandler.GetBeaconWithdrawals)
+	}
+
+	blob := api.Group("/blob")
+	{
+		blob.GET("/", blobHandler.GetBlobs)
+	}
+
+	aaGroup := r.Group("/api/account-abstraction")
+	{
+		aaGroup.GET("", aaHandler.GetAccountAbstraction)
+		aaGroup.GET("/bundles", aaHandler.GetOnlyBundleTransactions)
+		aaGroup.GET("/aa", aaHandler.GetOnlyAATransactions)
 	}
 
 	api.GET("/premium", premiumHandler)

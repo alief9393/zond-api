@@ -42,10 +42,9 @@ func (h *BeaconDepositHandler) GetBeaconDeposits(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.BeaconDepositsPaginatedResponse{
 		Deposits: deposits,
 		Pagination: dto.PaginationInfo{
-			Page:    page,
-			Limit:   limit,
-			Total:   total,
-			HasNext: page*limit < total,
+			Page:  page,
+			Limit: limit,
+			Total: total,
 		},
 	})
 }

@@ -17,4 +17,7 @@ type TransactionRepository interface {
 	CountPendingTransactions(ctx context.Context, method, from, to string) (int, error)
 	GetContractTransactions(ctx context.Context, page, limit int, method, from, to string) ([]model.Transaction, error)
 	CountContractTransactions(ctx context.Context, method, from, to string) (int, error)
+	GetDailyTransactionStats(days int) ([]dto.DailyTransactionStat, error)
+	GetAverageTPS(lastNBlocks int) (float64, error)
+	GetDailyFeeStats(days int) ([]dto.DailyFeeStat, error)
 }

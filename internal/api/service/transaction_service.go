@@ -160,3 +160,19 @@ func (s *TransactionService) GetContractTransactions(ctx context.Context, page, 
 func (s *TransactionService) CountContractTransactions(ctx context.Context, method, from, to string) (int, error) {
 	return s.repo.CountContractTransactions(ctx, method, from, to)
 }
+
+func (s *TransactionService) GetDailyTransactionStats(days int) ([]dto.DailyTransactionStat, error) {
+	return s.repo.GetDailyTransactionStats(days)
+}
+
+func (s *TransactionService) GetAverageTPS(blockCount int) (*dto.TPSStatResponse, error) {
+	tps, err := s.repo.GetAverageTPS(blockCount)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.TPSStatResponse{AverageTPS: tps}, nil
+}
+
+func (s *TransactionService) GetDailyFeeStats(days int) ([]dto.DailyFeeStat, error) {
+	return s.repo.GetDailyFeeStats(days)
+}
